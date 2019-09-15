@@ -51,20 +51,24 @@ Sets the initial condition
 */
 std::unique_ptr<systems::Context<double>> run_sim::CreateContext(double value) const {
     auto context = this->AllocateContext();
-    systems::VectorBase<double>& dstate = context->get_mutable_discrete_state_vector();
-    dstate.SetAtIndex(0, value);
+    std::cout << context->to_string() << std::endl;
+    systems::VectorBase<double>& cstate = context->get_mutable_continuous_state_vector();
+    cstate.SetAtIndex(0, 0.0); //Velocity
+    cstate.SetAtIndex(1, value); //Acceleration
     return context;
 }
 
 int main(int argc, char* argv[]) {
     gflags::ParseCommandLineFlags(&argc, &argv, true);
     auto system = std::make_unique<run_sim>();
-
+    std::cout << "finished" << std::endl;
     /*
     This actually runs the simulation
     */
     systems::Simulator<double> sim(*system, system->CreateContext(1.5));
+    std::cout << "sim created" << std::endl;
     sim.Initialize();
+    std::cout << "sim init finished" << std::endl;
     sim.AdvanceTo(1);
 
     /*

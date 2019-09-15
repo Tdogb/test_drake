@@ -11,11 +11,12 @@ namespace test_drake {
     class simple_system : public systems::LeafSystem<T>
     {
     private:
-        void update(const systems::Context<T>& context, systems::DiscreteValues<T>* values) const;
+        // void update(const systems::Context<T>& context, systems::DiscreteValues<T>* values) const;
         void setStateOutput(const systems::Context<T>& context, systems::BasicVector<T>* output) const;
     public:
         DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(simple_system); 
         simple_system();
+        void DoCalcTimeDerivatives(const systems::Context<T>& context, systems::ContinuousState<T>* derrivatives) const;
         ~simple_system();
     };
 
