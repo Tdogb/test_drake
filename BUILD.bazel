@@ -1,0 +1,39 @@
+# -*- python -*-
+
+load(
+    "@drake//tools/skylark:drake_cc.bzl",
+    "drake_cc_binary",
+    "drake_cc_library",
+)
+load("//tools/install:install_data.bzl", "install_data")
+load("//tools/lint:lint.bzl", "add_lint_tests")
+
+drake_cc_library(
+    name = "simple_system",
+    srcs = ["simple_system.cc"],
+    hdrs = ["simple_system.h"],
+    visibility = ["//visibility:public"],
+    deps = [
+        "//systems/framework:leaf_system",
+        "//systems/framework:system",
+        "//common:essential",
+    ],
+)
+
+drake_cc_binary(
+    name = "run_sim",
+    srcs = [
+        "run_sim.cc",
+    ],
+    deps = [
+        ":simple_system",
+        "//common:find_resource",
+        "//systems/lcm:lcm_interface_system",
+        "//systems/framework:diagram",
+        "//systems/framework:diagram_builder",
+        "//systems/primitives:constant_vector_source",
+        "//systems/primitives:signal_logger",
+        "//systems/analysis:simulator",
+        "@gflags",
+    ],
+)
