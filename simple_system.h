@@ -1,6 +1,7 @@
 // #include "drake/systems/framework/system_base.h"
 //#include "drake/systems/framework/system.h"
 #include "drake/systems/framework/leaf_system.h"
+#include "drake/systems/framework/input_port.h"
 
 namespace drake {
 namespace examples {
@@ -15,8 +16,6 @@ namespace test_drake {
     public:
         DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(simple_system); 
         simple_system();
-        static constexpr double kPeriod = 1 / 50; //10hz
-        static constexpr double kOffset = 0;
         ~simple_system();
     };
 

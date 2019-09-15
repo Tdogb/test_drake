@@ -26,39 +26,28 @@ private:
 public:
     DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(run_sim);
     run_sim(/* args */);
-    std::unique_ptr<systems::Context<double>> CreateContext(double value) const;
+    std::unique_ptr<systems::Context<double>> CreateContext(double value) const; //Not sure why this has to be const
+    systems::SignalLogger<double>* logger;
     ~run_sim();
 };
 
-run_sim::run_sim(/* args */)
-{
+run_sim::run_sim() {
     systems::DiagramBuilder<double> diagrambuilder;
-    const double val = 1.5; //Value to be multiplied
-    auto valueSource = diagrambuilder.AddSystem<systems::ConstantVectorSource<double>>(val);
-    auto simple_sys = diagrambuilder.template AddSystem<simple_system<double>>(); //How is this legal syntax?
-    diagrambuilder.Connect(*valueSource, *simple_sys);
-    auto logger = LogOutput(simple_sys->get_output_port(0), &diagrambuilder);
-    //logger->set_publish_period(simple_system<double>::kPeriod);
-    auto diagram = diagrambuilder.Build();
-
-    systems::Simulator<double> sim(*diagram);
-    sim.AdvanceTo(10 * simple_system<double>::kPeriod);
-
-    //Write out the logs
-    for(int i = 0; i < logger->sample_times().size(); i++) {
-        const double logOut = logger->sample_times()[i];
-        std::cout << logger->data()(0,i) << "  ( " << logOut << " )  " << std::endl;
-    }
-    //auto lcm = diagrambuilder.AddSystem<systems::lcm::LcmInterfaceSystem>();
+    /*
+    This will add the simple_system to the diagram
+    */
+    auto simple_sys = diagrambuilder.AddSystem<simple_system<double>>();
+    /*
+    Set up logging (in order to print out the result after the simulation)
+    */
+    logger = LogOutput(simple_sys->get_output_port(0), &diagrambuilder);
+    diagrambuilder.BuildInto(this); 
 }
 
-run_sim::~run_sim()
-{
-}
+run_sim::~run_sim() {}
 
 /*
-Context is where the value is stored
-This would usually be the position or velocity of a system
+Sets the initial condition
 */
 std::unique_ptr<systems::Context<double>> run_sim::CreateContext(double value) const {
     auto context = this->AllocateContext();
@@ -69,18 +58,33 @@ std::unique_ptr<systems::Context<double>> run_sim::CreateContext(double value) c
 
 int main(int argc, char* argv[]) {
     gflags::ParseCommandLineFlags(&argc, &argv, true);
-    run_sim a;
-    //std::make_unique<run_sim>;
-    //std::make_unique<simple_system<double>> ex_system;
-    //auto lcm = diagrambuilder.AddSystem<systems::lcm::LcmInterfaceSystem>();
-    //auto simple_sys = diagrambuilder.AddSystem(std::make_unique<drake::examples::test_drake::simple_system<double>>());
-    //diagrambuilder.AddSystem<simple_system<double>>():
+    auto system = std::make_unique<run_sim>();
+
+    /*
+    This actually runs the simulation
+    */
+    systems::Simulator<double> sim(*system, system->CreateContext(1.5));
+    sim.Initialize();
+    sim.AdvanceTo(1);
+
+    /*
+    Prints out the logs
+    */
+    for(int i = 0; i < system->logger->sample_times().size(); i++) {
+        const double logOut = system->logger->sample_times()[i];
+        std::cout << system->logger->data()(0,i) << "  ( " << logOut << " )  " << std::endl;
+    }
     return 0;
 }
 }   
 }
 }
 }
+
+/*
+This just calls the main function inside of the namespaces
+because the main inside of the namespaces will not be recognized by the compiler
+*/
 int main(int argc, char **argv) {
     return drake::examples::test_drake::main(argc,argv);
 }
