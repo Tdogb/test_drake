@@ -16,22 +16,11 @@ drake_cc_library(
     deps = [
         "//systems/framework:leaf_system",
         "//systems/framework:system",
+        "//geometry:geometry_visualization",
         "//common:essential",
     ],
 )
 
-drake_cc_library(
-    name = "send_to_visualizer",
-    srcs = ["send_to_visualizer.cc", "utilities.cc"],
-    hdrs = ["send_to_visualizer.h", "utilities.h"],
-    deps = [
-        "//systems/primitives:matrix_gain",
-        "//systems/framework:diagram",
-        "//systems/framework:diagram_builder",
-        "//systems/framework:leaf_system",
-        "//common:essential",
-    ],
-)
 drake_cc_binary(
     name = "run_sim",
     srcs = [
@@ -39,7 +28,6 @@ drake_cc_binary(
     ],
     deps = [
         ":simple_system",
-        ":send_to_visualizer",
         "//common:find_resource",
         "//systems/lcm:lcm_interface_system",
         "//systems/framework:diagram",
@@ -49,7 +37,9 @@ drake_cc_binary(
         "//systems/analysis:simulator",
         "//attic/multibody/rigid_body_plant:drake_visualizer",
         "//attic/multibody/parsers",
-
+        "//multibody/parsing",
+        "//multibody/plant:contact_results_to_lcm",
+        "//geometry:geometry_visualization",
         "@gflags",
     ],
 )

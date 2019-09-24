@@ -6,14 +6,16 @@
 #include "drake/systems/framework/diagram.h"
 #include "drake/systems/framework/diagram_builder.h"
 #include "drake/examples/test_drake/simple_system.h"
-#include "drake/examples/test_drake/send_to_visualizer.h"
 #include "drake/systems/lcm/lcm_interface_system.h"
 #include "drake/systems/primitives/constant_vector_source.h"
 #include "drake/systems/primitives/signal_logger.h"
 #include "drake/systems/analysis/simulator.h"
 #include "drake/multibody/rigid_body_plant/drake_visualizer.h"
 #include "drake/multibody/parsers/sdf_parser.h"
-#include "drake/examples/test_drake/utilities.h"
+#include "drake/multibody/parsing/parser.h"
+#include "drake/multibody/plant/contact_results_to_lcm.h"
+#include "drake/geometry/geometry_visualization.h"
+#include "drake/geometry/scene_graph.h"
 
 //using drake::systems::DiagramBuilder;
 //using drake::systems::Diagram;
@@ -38,31 +40,34 @@ public:
 
 run_sim::run_sim() {
     systems::DiagramBuilder<double> diagrambuilder;
-    parsers::sdf::AddModelInstancesFromSdfFileToWorld("/Users/tdogb/drake/examples/test_drake/models/particle.sdf", multibody::joints::kRollPitchYaw, tree.get());
-    tree->compile();
-    //std::cout << tree->get_num_positions() << "  " << tree->get_num_velocities() << std::endl;
-    /*
-    This will add the simple_system to the diagram
-    */
-    //std::cout << "before covert_sys" << std::endl;
-    //auto convert_sys = diagrambuilder.AddSystem<send_to_visualizer<double>>();
-    //MatrixX<double> translatingMatrix(6,1);
-    //translatingMatrix.setZero();
-    //translatingMatrix(0,0) = 1.0;
-    //auto convert_sys = diagrambuilder.AddSystem(MakeDegenerateEulerJoint(translatingMatrix));
-    //std::cout << "created convert_sys" << std::endl;
-    auto simple_sys = diagrambuilder.AddSystem<simple_system<double>>();
-    auto lcm = diagrambuilder.AddSystem<systems::lcm::LcmInterfaceSystem>();
-    auto visualizer = diagrambuilder.AddSystem<systems::DrakeVisualizer>(*tree, lcm);
-    visualizer->get_name();
-    simple_sys->get_name();
-    // convert_sys->get_name();
-    //auto joint = diagrambuilder.AddSystem(MakeDegenerate);
-    /*
-    Set up logging (in order to print out the result after the simulation)
-    */
 
-    diagrambuilder.Connect(*simple_sys, *visualizer);
+    auto plnt = multibody::AddMultibodyPlantSceneGraph(&diagrambuilder, std::make_unique<multibody::MultibodyPlant<double>>());
+    multibody::MultibodyPlant<double>& plant = plnt.plant;
+
+    //multibody::Parser(&plant).AddModelFromFile("/Users/tdogb/drake/examples/test_drake/models/particle.sdf");
+    plant.RegisterVisualGeometry(plant.world_body(), math::RigidTransformd(), geometry::Box(1,1,1), "Box");
+    plant.RegisterVisualGeometry(plant.world_body(), math::RigidTransformd(), geometry::HalfSpace(), "Floor");
+    const multibody::CoulombFriction<double> friction(1.0,1.0);
+    plant.RegisterCollisionGeometry(plant.world_body(), math::RigidTransformd(), geometry::Box(1,1,1), "BoxCollision", friction);
+    plant.RegisterCollisionGeometry(plant.world_body(), math::RigidTransformd(), geometry::HalfSpace(), "GroundCollision", friction);
+    plant.Finalize();
+    plant.set_penetration_allowance(0.001);
+    plant.set_stiction_tolerance(0.001);
+    
+    //parsers::sdf::AddModelInstancesFromSdfFileToWorld("/Users/tdogb/drake/examples/test_drake/models/particle.sdf", multibody::joints::kRollPitchYaw, tree.get());
+    //tree->compile();
+    auto lcm = diagrambuilder.AddSystem<systems::lcm::LcmInterfaceSystem>();
+    const geometry::SourceId sid = plnt.scene_graph.RegisterSource("Pose0");
+    auto simple_sys = diagrambuilder.AddSystem<simple_system<double>>(sid, &plnt.scene_graph);
+    diagrambuilder.Connect(plnt.scene_graph.get_query_output_port(), simple_sys->get_input_port());
+    diagrambuilder.Connect(simple_sys->get_output_port(), plnt.scene_graph.get_source_pose_port(sid));
+    geometry::ConnectDrakeVisualizer(&diagrambuilder, plnt.scene_graph, lcm);
+    multibody::ConnectContactResultsToDrakeVisualizer(&diagrambuilder, plant, lcm);
+    //auto visualizer = diagrambuilder.AddSystem<systems::DrakeVisualizer>(*tree, lcm);
+    //visualizer->get_name();
+    simple_sys->get_name();
+
+    //diagrambuilder.Connect(simple_sys->get_, plnt.scene_graph.get_source_pose_port());
     logger = LogOutput(simple_sys->get_output_port(0), &diagrambuilder);
     diagrambuilder.BuildInto(this);
 }
@@ -74,9 +79,8 @@ Sets the initial condition
 */
 std::unique_ptr<systems::Context<double>> run_sim::CreateContext(double value) const {
     auto context = this->AllocateContext();
-    //std::cout << context->to_string() << std::endl;
     systems::VectorBase<double>& cstate = context->get_mutable_continuous_state_vector();
-    std::cout << "cstate size: " << cstate.size() << std::endl;
+    //std::cout << "cstate size: " << cstate.size() << std::endl;
     cstate.SetAtIndex(0, 0.0); //Velocity
     cstate.SetAtIndex(1, value); //Acceleration
     return context;
@@ -85,15 +89,12 @@ std::unique_ptr<systems::Context<double>> run_sim::CreateContext(double value) c
 int main(int argc, char* argv[]) {
     gflags::ParseCommandLineFlags(&argc, &argv, true);
     auto system = std::make_unique<run_sim>();
-    //std::cout << "finished" << std::endl;
     /*
     This actually runs the simulation
     */
     systems::Simulator<double> sim(*system, system->CreateContext(1.5));
-    //std::cout << "sim created" << std::endl;
     sim.Initialize();
     sim.set_target_realtime_rate(1);
-    //std::cout << "sim init finished" << std::endl;
     sim.AdvanceTo(10);
 
     /*

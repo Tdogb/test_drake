@@ -7,28 +7,28 @@
         <pose>0 0 0 0 0 0</pose>
         <mass>1.0</mass>
         <inertia>
-          <ixx>0.4</ixx>
-          <ixy>0.4</ixy>
-          <ixz>0.4</ixz>
-          <iyy>0.4</iyy>
-          <iyz>0.4</iyz>
-          <izz>0.4</izz>
+          <ixx>0.083</ixx>
+          <ixy>0.0</ixy>
+          <ixz>0.0</ixz>
+          <iyy>0.083</iyy>
+          <iyz>0.0</iyz>
+          <izz>0.083</izz>
         </inertia>
       </inertial>
       <collision name="body_collision">
         <pose>0 0 0 0 0 0</pose>
         <geometry>
-          <sphere>
-            <radius>0.1</radius>
-          </sphere>
+          <box>
+            <size>0.1 0.1 0.1</size>
+          </box>
         </geometry>
       </collision>
       <visual name="body_visual">
         <pose>0 0 0 0 0 0</pose>
         <geometry>
-          <sphere>
-            <radius>0.1</radius>
-          </sphere>
+          <box>
+            <size>0.1 0.1 0.1</size>
+          </box>
         </geometry>
         <material>
           <diffuse>1.0 0.0 0.0 1.0</diffuse>
